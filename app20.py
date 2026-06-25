@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.title("テトリス風ゲーム")
-st.caption("画面（枠内）を一度クリックしてから、キーボードで操作してください。")
+st.caption("画面（枠内）を一度クリックしてから、スペースキーを押してゲームを開始してください。")
 
-# 完全に動作するHTML/CSS/JSコード
+# スペースキーでスタートするテトリスコード
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -27,10 +27,31 @@ html_code = """
             margin-bottom: 10px;
             font-weight: bold;
         }
+        #game-container {
+            position: relative;
+        }
         canvas {
             border: 4px solid #fff;
             background-color: #111;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            box-sizing: border-box;
+            border: 4px solid transparent;
         }
         .controls {
             margin-top: 15px;
@@ -44,19 +65,26 @@ html_code = """
 <body>
 
     <div id="score">SCORE: 0</div>
-    <canvas id="tetris" width="240" height="400"></canvas>
+    <div id="game-container">
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div id="overlay">PRESS SPACE<br>TO START</div>
+    </div>
 
     <div class="controls">
         【操作方法】<br>
-        ← / → : 移動 | ↑ : 回転<br>
-        ↓ : ソフトドロップ | Space : ハードドロップ
+        Space : スタート / ハードドロップ<br>
+        ← / → : 移動 | ↑ : 回転 | ↓ : ソフトドロップ
     </div>
 
 <script>
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
 
 context.scale(20, 20);
+
+// ゲームの状態管理
+let isPlaying = false;
 
 function arenaSweep() {
     let rowCount = 1;
@@ -97,7 +125,6 @@ function createMatrix(w, h) {
     return matrix;
 }
 
-// テトリミノの形状データを正しく定義
 function createPiece(type) {
     if (type === 'I') {
         return [,
@@ -157,6 +184,7 @@ const colors = [
 ];
 
 function drawMatrix(matrix, offset) {
+    if (!matrix) return;
     matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
@@ -181,6 +209,7 @@ function merge(arena, player) {
 }
 
 function playerDrop() {
+    if (!isPlaying) return;
     player.pos.y++;
     if (collide(arena, player)) {
         player.pos.y--;
@@ -193,6 +222,7 @@ function playerDrop() {
 }
 
 function playerHardDrop() {
+    if (!isPlaying) return;
     while (!collide(arena, player)) {
         player.pos.y++;
     }
@@ -205,6 +235,7 @@ function playerHardDrop() {
 }
 
 function playerMove(offset) {
+    if (!isPlaying) return;
     player.pos.x += offset;
     if (collide(arena, player)) {
         player.pos.x -= offset;
@@ -217,14 +248,16 @@ function playerReset() {
     player.pos.y = 0;
     player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
     
+    // ゲームオーバー判定
     if (collide(arena, player)) {
-        arena.forEach(row => row.fill(0));
-        player.score = 0;
-        updateScore();
+        isPlaying = false;
+        overlay.style.display = 'flex';
+        overlay.innerHTML = 'GAME OVER<br><br><span style="font-size:12px;color:#aaa;">PRESS SPACE TO RESTART</span>';
     }
 }
 
 function playerRotate(dir) {
+    if (!isPlaying) return;
     const pos = player.pos.x;
     let offset = 1;
     rotate(player.matrix, dir);
@@ -260,9 +293,11 @@ function update(time = 0) {
     const deltaTime = time - lastTime;
     lastTime = time;
 
-    dropCounter += deltaTime;
-    if (dropCounter > dropInterval) {
-        playerDrop();
+    if (isPlaying) {
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) {
+            playerDrop();
+        }
     }
 
     draw();
@@ -273,14 +308,30 @@ function updateScore() {
     document.getElementById('score').innerText = `SCORE: ${player.score}`;
 }
 
+// ゲームを開始する関数
+function gameStart() {
+    arena.forEach(row => row.fill(0));
+    player.score = 0;
+    updateScore();
+    playerReset();
+    isPlaying = true;
+    overlay.style.display = 'none';
+}
+
 // キーイベント制御
 window.addEventListener('keydown', event => {
-    // 矢印キー(37-40)とスペース(32)のスクロールを防止
-    if([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
+    // 37-40(矢印キー), 32(スペースキー) の画面スクロールを防止
+    if ([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
         event.preventDefault();
     }
 
-    if (event.keyCode === 37) {
+    if (event.keyCode === 32) { // スペースキー
+        if (!isPlaying) {
+            gameStart(); // 始まっていないならスタート
+        } else {
+            playerHardDrop(); // プレイ中ならハードドロップ
+        }
+    } else if (event.keyCode === 37) {
         playerMove(-1);
     } else if (event.keyCode === 39) {
         playerMove(1);
@@ -288,21 +339,18 @@ window.addEventListener('keydown', event => {
         playerDrop();
     } else if (event.keyCode === 38) {
         playerRotate(1);
-    } else if (event.keyCode === 32) {
-        playerHardDrop();
     }
 });
 
 const arena = createMatrix(12, 20);
-
 const player = {
     pos: {x: 0, y: 0},
     matrix: null,
     score: 0,
 };
 
-playerReset();
-updateScore();
+// 初期描画
+draw();
 update();
 </script>
 </body>
