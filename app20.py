@@ -1,9 +1,15 @@
+import streamlit as st
+import streamlit.components.v1 as components
+
+st.title("テトリス風ゲーム")
+st.caption("画面をクリックしてから、キーボードで操作してください。")
+
+# HTML/CSS/JavaScript を一体化したコード
+html_code = """
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Clone Game</title>
     <style>
         body {
             background: #202023;
@@ -13,46 +19,46 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             margin: 0;
-        }
-        h1 {
-            margin-bottom: 10px;
+            padding-top: 10px;
         }
         #score {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
         }
         canvas {
-            border: 2px solid #fff;
+            border: 4px solid #fff;
             background-color: #111;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .controls {
             margin-top: 15px;
-            font-size: 14px;
-            color: #aaa;
+            font-size: 13px;
+            color: #ccc;
             text-align: center;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
-    <h1>TETRIS CLONE</h1>
     <div id="score">SCORE: 0</div>
     <canvas id="tetris" width="240" height="400"></canvas>
 
     <div class="controls">
-        操作方法:<br>
-        ← / → : 移動 | ↑ : 回転 | ↓ : ソフトドロップ | Space : ハードドロップ
+        【操作方法】<br>
+        ← / → : 移動 | ↑ : 回転<br>
+        ↓ : ソフトドロップ | Space : ハードドロップ
     </div>
 
 <script>
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 
-context.scale(20, 20); // 1ブロックを20pxサイズに拡大
+context.scale(20, 20); // 1ブロックを20pxに
 
-// ライン消去時のスコア計算
+// ライン消去
 function arenaSweep() {
     let rowCount = 1;
     outer: for (let y = arena.length - 1; y > 0; --y) {
@@ -61,7 +67,7 @@ function arenaSweep() {
                 continue outer;
             }
         }
-        const row = arena.splice(y, 1)[0].fill(0);
+        const row = arena.splice(y, 1).fill(0);
         arena.unshift(row);
         ++y;
 
@@ -85,7 +91,6 @@ function collide(arena, player) {
     return false;
 }
 
-// グリッド（盤面）の作成
 function createMatrix(w, h) {
     const matrix = [];
     while (h--) {
@@ -94,63 +99,54 @@ function createMatrix(w, h) {
     return matrix;
 }
 
-// テトリミノの形状データ
+// テトリミノの形状データ（修正版）
 function createPiece(type) {
     if (type === 'I') {
-        return [
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
+        return [,
+ ,
+ ,
+ ,
         ];
     } else if (type === 'L') {
-        return [
-            [0, 2, 0],
-            [0, 2, 0],
-            [0, 2, 2],
+        return [,
+ ,
+ ,
         ];
     } else if (type === 'J') {
-        return [
-            [0, 3, 0],
-            [0, 3, 0],
-            [3, 3, 0],
+        return [,
+ ,
+ ,
         ];
     } else if (type === 'O') {
-        return [
-            [4, 4],
-            [4, 4],
+        return [,
+ ,
         ];
     } else if (type === 'Z') {
-        return [
-            [5, 5, 0],
-            [0, 5, 5],
-            [0, 0, 0],
+        return [,
+ ,
+ ,
         ];
     } else if (type === 'S') {
-        return [
-            [0, 6, 6],
-            [6, 6, 0],
-            [0, 0, 0],
+        return [,
+ ,
+ ,
         ];
     } else if (type === 'T') {
-        return [
-            [0, 7, 0],
-            [7, 7, 7],
-            [0, 0, 0],
+        return [,
+ ,
+ ,
         ];
     }
 }
 
-// 描画処理
 function draw() {
-    context.fillStyle = '#000';
+    context.fillStyle = '#111';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     drawMatrix(arena, {x: 0, y: 0});
     drawMatrix(player.matrix, player.pos);
 }
 
-// ブロックの色分け
 const colors = [
     null,
     '#00f0f0', // I
@@ -167,15 +163,16 @@ function drawMatrix(matrix, offset) {
         row.forEach((value, x) => {
             if (value !== 0) {
                 context.fillStyle = colors[value];
-                context.fillRect(x + offset.x,
-                                 y + offset.y,
-                                 1, 1);
+                context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                // ブロックの枠線を描画して見やすくする
+                context.strokeStyle = '#111';
+                context.lineWidth = 0.05;
+                context.strokeRect(x + offset.x, y + offset.y, 1, 1);
             }
         });
     });
 }
 
-// 固定されたブロックを盤面にマージ
 function merge(arena, player) {
     player.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -186,7 +183,6 @@ function merge(arena, player) {
     });
 }
 
-// 落下処理
 function playerDrop() {
     player.pos.y++;
     if (collide(arena, player)) {
@@ -199,7 +195,6 @@ function playerDrop() {
     dropCounter = 0;
 }
 
-// 即時落下（ハードドロップ）
 function playerHardDrop() {
     while (!collide(arena, player)) {
         player.pos.y++;
@@ -212,7 +207,6 @@ function playerHardDrop() {
     dropCounter = 0;
 }
 
-// 左右移動
 function playerMove(offset) {
     player.pos.x += offset;
     if (collide(arena, player)) {
@@ -220,14 +214,12 @@ function playerMove(offset) {
     }
 }
 
-// ランダムに次のブロックを生成
 function playerReset() {
     const pieces = 'TJLOSZI';
     player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
     player.pos.y = 0;
     player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
     
-    // ゲームオーバー判定
     if (collide(arena, player)) {
         arena.forEach(row => row.fill(0));
         player.score = 0;
@@ -235,7 +227,6 @@ function playerReset() {
     }
 }
 
-// 回転処理
 function playerRotate(dir) {
     const pos = player.pos.x;
     let offset = 1;
@@ -251,17 +242,10 @@ function playerRotate(dir) {
     }
 }
 
-// 行列の回転
 function rotate(matrix, dir) {
     for (let y = 0; y < matrix.length; ++y) {
         for (let x = 0; x < y; ++x) {
-            [
-                matrix[x][y],
-                matrix[y][x],
-            ] = [
-                matrix[y][x],
-                matrix[x][y],
-            ];
+            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
         }
     }
     if (dir > 0) {
@@ -272,7 +256,7 @@ function rotate(matrix, dir) {
 }
 
 let dropCounter = 0;
-let dropInterval = 1000; // 1秒ごとに落下
+let dropInterval = 1000;
 let lastTime = 0;
 
 function update(time = 0) {
@@ -292,7 +276,13 @@ function updateScore() {
     document.getElementById('score').innerText = `SCORE: ${player.score}`;
 }
 
-document.addEventListener('keydown', event => {
+// キーボードイベントの監視
+window.addEventListener('keydown', event => {
+    // 矢印キーとスペースキーによる画面スクロールを防止
+    if([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
+        event.preventDefault();
+    }
+
     if (event.keyCode === 37) {
         playerMove(-1); // 左
     } else if (event.keyCode === 39) {
@@ -300,9 +290,9 @@ document.addEventListener('keydown', event => {
     } else if (event.keyCode === 40) {
         playerDrop();   // 下
     } else if (event.keyCode === 38) {
-        playerRotate(1); // 上で回転
+        playerRotate(1); // 上（回転）
     } else if (event.keyCode === 32) {
-        playerHardDrop(); // スペースでハードドロップ
+        playerHardDrop(); // スペース（即落下）
     }
 });
 
@@ -320,3 +310,7 @@ update();
 </script>
 </body>
 </html>
+"""
+
+# Streamlitの画面に埋め込み（高さは余裕を持って520pxに設定）
+components.html(html_code, height=520)
