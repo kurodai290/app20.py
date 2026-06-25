@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.title("テトリス風ゲーム")
-st.caption("画面（枠内）を一度クリックしてから、スペースキーを押してゲームを開始してください。")
+st.caption("ボタンをクリックしてゲームを開始・リセットできます。")
 
-# 完全にバグを修正したテトリスコード
+# 横型レイアウト・ボタン付きのテトリスコード
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -16,73 +16,136 @@ html_code = """
             color: #fff;
             font-family: sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             margin: 0;
-            padding-top: 10px;
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
         }
-        #score {
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: bold;
+        /* 横並びにするためのメインコンテナ */
+        #main-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 20px;
+            background: #2d2d30;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        #game-container {
+        /* ゲーム画面エリア */
+        #game-area {
             position: relative;
         }
         canvas {
-            border: 4px solid #fff;
+            border: 4px solid #444;
             background-color: #111;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: block;
         }
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 240px;
-            height: 400px;
-            background: rgba(0, 0, 0, 0.8);
+        /* サイドパネル（スコアとボタン） */
+        #side-panel {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-            color: #fff;
-            text-align: center;
-            box-sizing: border-box;
+            justify-content: flex-start;
+            width: 140px;
+            height: 400px;
         }
-        .controls {
-            margin-top: 15px;
-            font-size: 13px;
-            color: #ccc;
+        .panel-section {
+            background: #1e1e1f;
+            border: 2px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
             text-align: center;
-            line-height: 1.5;
+        }
+        .panel-title {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        #score-val {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffcc;
+        }
+        /* 操作ボタン */
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #start-btn {
+            background: #28a745;
+        }
+        #start-btn:hover {
+            background: #218838;
+        }
+        #reset-btn {
+            background: #dc3545;
+        }
+        #reset-btn:hover {
+            background: #c82333;
+        }
+        /* ゲーム内操作説明 */
+        .controls-info {
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.6;
+            text-align: left;
+            margin-top: auto;
         }
     </style>
 </head>
 <body>
 
-    <div id="score">SCORE: 0</div>
-    <div id="game-container">
-        <canvas id="tetris" width="240" height="400"></canvas>
-        <div id="overlay">PRESS SPACE<br>TO START</div>
-    </div>
+    <div id="main-container">
+        <!-- 左側：テトリス盤面 -->
+        <div id="game-area">
+            <canvas id="tetris" width="240" height="400"></canvas>
+        </div>
 
-    <div class="controls">
-        【操作方法】<br>
-        Space : スタート / ハードドロップ<br>
-        ← / → : 移動 | ↑ : 回転 | ↓ : ソフトドロップ
+        <!-- 右側：スコアボード ＆ ボタン -->
+        <div id="side-panel">
+            <!-- スコアボード -->
+            <div class="panel-section">
+                <div class="panel-title">SCORE</div>
+                <div id="score-val">0</div>
+            </div>
+
+            <!-- コントロールボタン -->
+            <button id="start-btn" class="btn" onclick="pressStartButton()">START</button>
+            <button id="reset-btn" class="btn" onclick="pressResetButton()">RESET</button>
+
+            <!-- 操作説明 -->
+            <div class="panel-section controls-info">
+                <strong>【操作方法】</strong><br>
+                ← / → : 左右移動<br>
+                ↑ : ブロック回転<br>
+                ↓ : 高速落下<br>
+                Space : 即座に接地
+            </div>
+        </div>
     </div>
 
 <script>
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
-const overlay = document.getElementById('overlay');
+const scoreVal = document.getElementById('score-val');
+const startBtn = document.getElementById('start-btn');
 
 context.scale(20, 20);
 
 let isPlaying = false;
+let gameStartedOnce = false; // 一度でもスタートしたか
 
 function arenaSweep() {
     let rowCount = 1;
@@ -123,7 +186,6 @@ function createMatrix(w, h) {
     return matrix;
 }
 
-// すべてのブロックの形状データを完全に記述（修正完了）
 function createPiece(type) {
     if (type === 'I') {
         return [,
@@ -164,11 +226,17 @@ function createPiece(type) {
 }
 
 function draw() {
+    // 盤面クリア
     context.fillStyle = '#111';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
+    // 固定されたブロックを描画
     drawMatrix(arena, {x: 0, y: 0});
-    drawMatrix(player.matrix, player.pos);
+    
+    // 動いているブロックを描画（ゲーム中の場合のみ）
+    if (isPlaying) {
+        drawMatrix(player.matrix, player.pos);
+    }
 }
 
 const colors = [
@@ -189,7 +257,7 @@ function drawMatrix(matrix, offset) {
             if (value !== 0) {
                 context.fillStyle = colors[value];
                 context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                context.strokeStyle = '#111';
+                context.strokeStyle = '#2d2d30';
                 context.lineWidth = 0.05;
                 context.strokeRect(x + offset.x, y + offset.y, 1, 1);
             }
@@ -247,10 +315,11 @@ function playerReset() {
     player.pos.y = 0;
     player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
     
+    // ゲームオーバー判定
     if (collide(arena, player)) {
         isPlaying = false;
-        overlay.style.display = 'flex';
-        overlay.innerHTML = 'GAME OVER<br><br><span style="font-size:12px;color:#aaa;">PRESS SPACE TO RESTART</span>';
+        startBtn.innerText = 'START';
+        alert('GAME OVER! スコア: ' + player.score);
     }
 }
 
@@ -303,54 +372,42 @@ function update(time = 0) {
 }
 
 function updateScore() {
-    document.getElementById('score').innerText = `SCORE: ${player.score}`;
+    scoreVal.innerText = player.score;
 }
 
-function gameStart() {
+// ボタン操作：START / PAUSE
+function pressStartButton() {
+    if (!gameStartedOnce) {
+        // 初回スタート時のみ盤面をクリア
+        arena.forEach(row => row.fill(0));
+        player.score = 0;
+        updateScore();
+        playerReset();
+        gameStartedOnce = true;
+    }
+    
+    if (isPlaying) {
+        isPlaying = false;
+        startBtn.innerText = 'START';
+    } else {
+        isPlaying = true;
+        startBtn.innerText = 'PAUSE';
+    }
+}
+
+// ボタン操作：RESET
+function pressResetButton() {
+    isPlaying = false;
+    gameStartedOnce = false;
     arena.forEach(row => row.fill(0));
     player.score = 0;
     updateScore();
-    playerReset();
-    isPlaying = true;
-    overlay.style.display = 'none';
+    startBtn.innerText = 'START';
+    draw();
 }
 
-// キーイベント制御
+// キーボードによるブロック操作（枠外クリック対策としてwindow全体で監視）
 window.addEventListener('keydown', event => {
-    // 矢印キー(37-40)とスペース(32)のスクロールを防止
-    if ([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
-        event.preventDefault();
-    }
+    // プレイ中のみキーボード操作を受け付ける
+    if (!isPlaying) return;
 
-    if (event.keyCode === 32) {
-        if (!isPlaying) {
-            gameStart();
-        } else {
-            playerHardDrop();
-        }
-    } else if (event.keyCode === 37) {
-        playerMove(-1);
-    } else if (event.keyCode === 39) {
-        playerMove(1);
-    } else if (event.keyCode === 40) {
-        playerDrop();
-    } else if (event.keyCode === 38) {
-        playerRotate(1);
-    }
-});
-
-const arena = createMatrix(12, 20);
-const player = {
-    pos: {x: 0, y: 0},
-    matrix: null,
-    score: 0,
-};
-
-draw();
-update();
-</script>
-</body>
-</html>
-"""
-
-components.html(html_code, height=520)
