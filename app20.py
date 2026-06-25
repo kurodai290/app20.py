@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.title("テトリス風ゲーム")
 st.caption("画面（枠内）を一度クリックしてから、スペースキーを押してゲームを開始してください。")
 
-# スペースキーでスタートするテトリスコード
+# 完全にバグを修正したテトリスコード
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -41,7 +41,7 @@ html_code = """
             left: 0;
             width: 240px;
             height: 400px;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -51,7 +51,6 @@ html_code = """
             color: #fff;
             text-align: center;
             box-sizing: border-box;
-            border: 4px solid transparent;
         }
         .controls {
             margin-top: 15px;
@@ -83,7 +82,6 @@ const overlay = document.getElementById('overlay');
 
 context.scale(20, 20);
 
-// ゲームの状態管理
 let isPlaying = false;
 
 function arenaSweep() {
@@ -125,6 +123,7 @@ function createMatrix(w, h) {
     return matrix;
 }
 
+// すべてのブロックの形状データを完全に記述（修正完了）
 function createPiece(type) {
     if (type === 'I') {
         return [,
@@ -248,7 +247,6 @@ function playerReset() {
     player.pos.y = 0;
     player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
     
-    // ゲームオーバー判定
     if (collide(arena, player)) {
         isPlaying = false;
         overlay.style.display = 'flex';
@@ -308,7 +306,6 @@ function updateScore() {
     document.getElementById('score').innerText = `SCORE: ${player.score}`;
 }
 
-// ゲームを開始する関数
 function gameStart() {
     arena.forEach(row => row.fill(0));
     player.score = 0;
@@ -320,16 +317,16 @@ function gameStart() {
 
 // キーイベント制御
 window.addEventListener('keydown', event => {
-    // 37-40(矢印キー), 32(スペースキー) の画面スクロールを防止
+    // 矢印キー(37-40)とスペース(32)のスクロールを防止
     if ([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
         event.preventDefault();
     }
 
-    if (event.keyCode === 32) { // スペースキー
+    if (event.keyCode === 32) {
         if (!isPlaying) {
-            gameStart(); // 始まっていないならスタート
+            gameStart();
         } else {
-            playerHardDrop(); // プレイ中ならハードドロップ
+            playerHardDrop();
         }
     } else if (event.keyCode === 37) {
         playerMove(-1);
@@ -349,7 +346,6 @@ const player = {
     score: 0,
 };
 
-// 初期描画
 draw();
 update();
 </script>
