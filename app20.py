@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.title("テトリス風ゲーム")
-st.caption("画面をクリックしてから、キーボードで操作してください。")
+st.caption("画面（枠内）を一度クリックしてから、キーボードで操作してください。")
 
-# HTML/CSS/JavaScript を一体化したコード
+# 完全に動作するHTML/CSS/JSコード
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -56,9 +56,8 @@ html_code = """
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 
-context.scale(20, 20); // 1ブロックを20pxに
+context.scale(20, 20);
 
-// ライン消去
 function arenaSweep() {
     let rowCount = 1;
     outer: for (let y = arena.length - 1; y > 0; --y) {
@@ -76,7 +75,6 @@ function arenaSweep() {
     }
 }
 
-// 衝突判定
 function collide(arena, player) {
     const [m, o] = [player.matrix, player.pos];
     for (let y = 0; y < m.length; ++y) {
@@ -99,7 +97,7 @@ function createMatrix(w, h) {
     return matrix;
 }
 
-// テトリミノの形状データ（修正版）
+// テトリミノの形状データを正しく定義
 function createPiece(type) {
     if (type === 'I') {
         return [,
@@ -164,7 +162,6 @@ function drawMatrix(matrix, offset) {
             if (value !== 0) {
                 context.fillStyle = colors[value];
                 context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                // ブロックの枠線を描画して見やすくする
                 context.strokeStyle = '#111';
                 context.lineWidth = 0.05;
                 context.strokeRect(x + offset.x, y + offset.y, 1, 1);
@@ -276,23 +273,23 @@ function updateScore() {
     document.getElementById('score').innerText = `SCORE: ${player.score}`;
 }
 
-// キーボードイベントの監視
+// キーイベント制御
 window.addEventListener('keydown', event => {
-    // 矢印キーとスペースキーによる画面スクロールを防止
+    // 矢印キー(37-40)とスペース(32)のスクロールを防止
     if([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1) {
         event.preventDefault();
     }
 
     if (event.keyCode === 37) {
-        playerMove(-1); // 左
+        playerMove(-1);
     } else if (event.keyCode === 39) {
-        playerMove(1);  // 右
+        playerMove(1);
     } else if (event.keyCode === 40) {
-        playerDrop();   // 下
+        playerDrop();
     } else if (event.keyCode === 38) {
-        playerRotate(1); // 上（回転）
+        playerRotate(1);
     } else if (event.keyCode === 32) {
-        playerHardDrop(); // スペース（即落下）
+        playerHardDrop();
     }
 });
 
@@ -312,5 +309,4 @@ update();
 </html>
 """
 
-# Streamlitの画面に埋め込み（高さは余裕を持って520pxに設定）
 components.html(html_code, height=520)
